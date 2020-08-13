@@ -1,5 +1,5 @@
-import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { NgModule } from '@angular/core';
 import { HttpClientModule } from '@angular/common/http';
 
 import { MapLibraryModule } from '../../projects/map-library/src/lib/map-library.module';
@@ -15,7 +15,7 @@ import { WeatherComponent } from './weather/weather.component';
   imports: [
 	 BrowserModule,
 	 HttpClientModule,
-	 MapLibraryModule
+    MapLibraryModule
   ],
   providers: [],
   bootstrap: [AppComponent]

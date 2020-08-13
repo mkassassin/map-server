@@ -1,4 +1,4 @@
-import { ɵɵdefineInjectable, ɵsetClassMetadata, Injectable, EventEmitter, ɵɵdirectiveInject, ElementRef, ɵɵdefineComponent, ɵɵlistener, ɵɵresolveWindow, ɵɵNgOnChangesFeature, ɵɵelementStart, ɵɵelement, ɵɵelementEnd, ɵɵadvance, ɵɵclassMapInterpolate1, ɵɵclassMap, ɵɵclassMapInterpolate2, Component, Output, HostListener, ɵɵdefineNgModule, ɵɵdefineInjector, ɵɵsetNgModuleScope, NgModule } from '@angular/core';
+import { ɵɵdefineInjectable, ɵsetClassMetadata, Injectable, EventEmitter, ɵɵdirectiveInject, ElementRef, ɵɵdefineComponent, ɵɵlistener, ɵɵresolveWindow, ɵɵNgOnChangesFeature, ɵɵelementStart, ɵɵelement, ɵɵelementEnd, ɵɵadvance, ɵɵclassMapInterpolate1, ɵɵclassMap, Component, Output, HostListener, ɵɵdefineNgModule, ɵɵdefineInjector, ɵɵsetNgModuleScope, NgModule } from '@angular/core';
 import { map, tileLayer, Control, marker, Marker, DivIcon } from 'leaflet';
 import 'leaflet-control-geocoder';
 
@@ -93,13 +93,20 @@ class MapLibraryComponent {
         marker$1.forEach(element => {
             if ("lat" in element && "lng" in element) {
                 element.id = i;
-                if (!element.text) {
+                if (!element.text && element.img) {
+                    this.mapMarkers[i] = this.generateImageMarker(element);
+                }
+                else if (!element.text) {
                     this.mapMarkers[i] = marker([element.lat, element.lng]);
                 }
                 else {
                     this.mapMarkers[i] = this.generateIconMarker(element);
                 }
                 this.mapMarkers[i].addTo(this.map);
+                if (this.navigate && this.mapLat == element.lat && this.mapLng == element.lng) {
+                    this.navigateId = i;
+                    this.elem.nativeElement.querySelector("#marker_" + this.navigateId).style.background = "orange";
+                }
                 i++;
             }
         });
@@ -113,16 +120,31 @@ class MapLibraryComponent {
     // generate Marker
     generateIconMarker(element) {
         // set html form
-        let html = `<div id="marker_${element.id}" style="background: white; border-radius:20px; position:absolute; padding:5px 10px 0 10px; text-align:center;">
-              <div style="text-align:center; font-size:1.2em;">${element.text}</div>
-              ` + (element.content ? `<span>${element.content}</span>` : ``) +
-            (element.img ? `<img style="width:60px" src="${element.img}"/>` : ``) + `
-            </div>`;
+        let html = `
+      <div class="marker" id="marker_${element.id}">
+        <div>${element.text}</div>
+        ` + (element.content ? `<span>${element.content}</span>` : ``) +
+            (element.img ? `<img src="${element.img}"/>` : ``) + `
+      </div>`;
         // return leaflet marker
         return new Marker([element.lat, element.lng], {
             icon: new DivIcon({
                 className: '',
                 iconSize: [100, 70],
+                iconAnchor: [60, element.img ? 40 : 10],
+                html,
+            })
+        });
+    }
+    // generate image Marker
+    generateImageMarker(element) {
+        // set html form
+        let html = `<img id="marker_${element.id}" style="width:80px;" src="${element.img}"/>`;
+        // return leaflet marker
+        return new Marker([element.lat, element.lng], {
+            icon: new DivIcon({
+                className: '',
+                iconSize: [80, 70],
                 iconAnchor: [45, element.img ? 40 : 10],
                 html,
             })
@@ -149,16 +171,18 @@ class MapLibraryComponent {
     }
     /*************** keyboard event detect and functions *************/
     keyEvent(event) {
-        if (this.displayMenu != "") {
-            this.handlingMenu(event.key);
-        }
-        else if (this.navigate) {
-            this.handlingNavigation(event.key);
-        }
-        else {
-            this.handlingMap(event.key);
-            // send change to parent application
-            this.sendModifications(event.key);
+        if (this.focused) {
+            if (this.displayMenu != "") {
+                this.handlingMenu(event.key);
+            }
+            else if (this.navigate) {
+                this.handlingNavigation(event.key);
+            }
+            else {
+                this.handlingMap(event.key);
+                // send change to parent application
+                this.sendModifications(event.key);
+            }
         }
     }
     handlingNavigation(key) {
@@ -189,14 +213,14 @@ class MapLibraryComponent {
         switch (key) {
             case "ArrowRight":
                 this.choiseMenu++;
-                if (this.choiseMenu > 3) {
+                if (this.choiseMenu > 4) {
                     this.choiseMenu = 0;
                 }
                 break;
             case "ArrowLeft":
                 this.choiseMenu--;
                 if (this.choiseMenu < 0) {
-                    this.choiseMenu = 3;
+                    this.choiseMenu = 4;
                 }
                 break;
             case "Enter":
@@ -209,13 +233,17 @@ class MapLibraryComponent {
                     this.setFocusOut();
                 }
                 if (this.choiseMenu == 1) {
-                    this.setMarker(this.marker);
-                    this.changeMode();
+                    this.handleIcon = "move";
+                    this.moveMode = true;
                 }
                 else if (this.choiseMenu == 2) {
-                    this.setNavigationMode();
+                    this.handleIcon = "zoom";
+                    this.moveMode = false;
                 }
                 else if (this.choiseMenu == 3) {
+                    this.setNavigationMode();
+                }
+                else if (this.choiseMenu == 4) {
                     alert("exit");
                 }
                 this.closeMenu();
@@ -280,11 +308,11 @@ class MapLibraryComponent {
         this.moveMode = !this.moveMode;
         if (this.moveMode) {
             this.handleIcon = "move";
-            this.handleMenuIcon = "zoom";
+            this.choiseMenu = 1;
         }
         else {
             this.handleIcon = "zoom";
-            this.handleMenuIcon = "move";
+            this.choiseMenu = 2;
         }
     }
     sendModifications(key) {
@@ -316,7 +344,6 @@ class MapLibraryComponent {
     }
     closeMenu() {
         this.displayMenu = "";
-        this.choiseMenu = 1;
     }
     // show escape message
     selectMenu(key) {
@@ -368,24 +395,33 @@ class MapLibraryComponent {
         else {
             this.navigateId = 0;
         }
-        this.elem.nativeElement.querySelector("#marker_" + this.navigateId).style.background = "orange";
+        let el = this.marker[this.navigateId];
+        this.mapLat = el.lat;
+        this.mapLng = el.lng;
+        this.moveMap(0, 0);
+        this.sendModifications("");
+    }
+    calcAngle(adjacent, opposite) {
+        return Math.atan(Math.abs(opposite) / Math.abs(adjacent)) * (180 / Math.PI);
+    }
+    calcHyp(adjacent, opposite) {
+        return Math.sqrt(Math.pow(adjacent, 2) + Math.pow(opposite, 2));
+        ;
     }
     findFirstLeftElement() {
         let selected = this.marker[this.navigateId];
-        let newSelect = this.marker[this.navigateId == 0 ? 1 : 0];
+        let newSelect = null;
         this.marker.forEach(element => {
-            if (element != selected && element.lng < selected.lng && (element.lng > newSelect.lng || newSelect.lng > selected.lng)) {
-                newSelect = element;
+            if (element != selected && element.lng < selected.lng && (newSelect == null || (element.lng > newSelect.lng || newSelect.lng > selected.lng))) {
+                let angle = this.calcAngle(element.lng - selected.lng, element.lat - selected.lat);
+                //console.log(element.text+" "+angle)
+                if (angle < 45) {
+                    newSelect = element;
+                }
             }
         });
-        if (newSelect.lng >= selected.lng) {
-            let min = this.marker[0];
-            this.marker.forEach(element => {
-                if (element.lng > min.lng) {
-                    min = element;
-                }
-            });
-            this.navigateId = min.id;
+        if (newSelect == null || newSelect.lng >= selected.lng) {
+            this.navigateId = selected.id;
         }
         else {
             this.navigateId = newSelect.id;
@@ -393,20 +429,17 @@ class MapLibraryComponent {
     }
     findFirstRightElement() {
         let selected = this.marker[this.navigateId];
-        let newSelect = this.marker[this.navigateId == 0 ? 1 : 0];
+        let newSelect = null;
         this.marker.forEach(element => {
-            if (element != selected && element.lng > selected.lng && (element.lng < newSelect.lng || newSelect.lng < selected.lng)) {
-                newSelect = element;
+            if (element != selected && element.lng > selected.lng && (newSelect == null || (element.lng < newSelect.lng || newSelect.lng < selected.lng))) {
+                let angle = this.calcAngle(element.lng - selected.lng, element.lat - selected.lat);
+                if (angle < 45) {
+                    newSelect = element;
+                }
             }
         });
-        if (newSelect.lng <= selected.lng) {
-            let min = this.marker[0];
-            this.marker.forEach(element => {
-                if (element.lng < min.lng) {
-                    min = element;
-                }
-            });
-            this.navigateId = min.id;
+        if (newSelect == null || newSelect.lng <= selected.lng) {
+            this.navigateId = selected.id;
         }
         else {
             this.navigateId = newSelect.id;
@@ -421,13 +454,7 @@ class MapLibraryComponent {
             }
         });
         if (newSelect.lat >= selected.lat) {
-            let min = this.marker[0];
-            this.marker.forEach(element => {
-                if (element.lat > min.lat) {
-                    min = element;
-                }
-            });
-            this.navigateId = min.id;
+            this.navigateId = selected.id;
         }
         else {
             this.navigateId = newSelect.id;
@@ -442,13 +469,7 @@ class MapLibraryComponent {
             }
         });
         if (newSelect.lat <= selected.lat) {
-            let min = this.marker[0];
-            this.marker.forEach(element => {
-                if (element.lat < min.lat) {
-                    min = element;
-                }
-            });
-            this.navigateId = min.id;
+            this.navigateId = selected.id;
         }
         else {
             this.navigateId = newSelect.id;
@@ -505,7 +526,7 @@ class MapLibraryComponent {
 MapLibraryComponent.ɵfac = function MapLibraryComponent_Factory(t) { return new (t || MapLibraryComponent)(ɵɵdirectiveInject(ElementRef)); };
 MapLibraryComponent.ɵcmp = ɵɵdefineComponent({ type: MapLibraryComponent, selectors: [["map-library"]], hostBindings: function MapLibraryComponent_HostBindings(rf, ctx) { if (rf & 1) {
         ɵɵlistener("keyup", function MapLibraryComponent_keyup_HostBindingHandler($event) { return ctx.keyEvent($event); }, false, ɵɵresolveWindow);
-    } }, inputs: { mapLat: "mapLat", mapLng: "mapLng", mapZoom: "mapZoom", search: "search", marker: "marker" }, outputs: { onchange: "onchange", onselect: "onselect" }, features: [ɵɵNgOnChangesFeature], decls: 9, vars: 19, consts: [[1, "map-container"], ["id", "map"], [1, "menu-container"], [1, "menu-box"]], template: function MapLibraryComponent_Template(rf, ctx) { if (rf & 1) {
+    } }, inputs: { mapLat: "mapLat", mapLng: "mapLng", mapZoom: "mapZoom", search: "search", marker: "marker", focused: "focused" }, outputs: { onchange: "onchange", onselect: "onselect" }, features: [ɵɵNgOnChangesFeature], decls: 10, vars: 21, consts: [[1, "map-container"], ["id", "map"], [1, "menu-container"], [1, "menu-box"]], template: function MapLibraryComponent_Template(rf, ctx) { if (rf & 1) {
         ɵɵelementStart(0, "div", 0);
         ɵɵelement(1, "i");
         ɵɵelement(2, "div", 1);
@@ -516,6 +537,7 @@ MapLibraryComponent.ɵcmp = ɵɵdefineComponent({ type: MapLibraryComponent, sel
         ɵɵelement(6, "i");
         ɵɵelement(7, "i");
         ɵɵelement(8, "i");
+        ɵɵelement(9, "i");
         ɵɵelementEnd();
         ɵɵelementEnd();
     } if (rf & 2) {
@@ -526,17 +548,19 @@ MapLibraryComponent.ɵcmp = ɵɵdefineComponent({ type: MapLibraryComponent, sel
         ɵɵadvance(2);
         ɵɵclassMapInterpolate1("icon search ", ctx.choiseMenu == 0 ? "selected" : "", "");
         ɵɵadvance(1);
-        ɵɵclassMapInterpolate2("icon ", ctx.handleMenuIcon, " ", ctx.choiseMenu == 1 ? "selected" : "", "");
+        ɵɵclassMapInterpolate1("icon move ", ctx.choiseMenu == 1 ? "selected" : "", "");
         ɵɵadvance(1);
-        ɵɵclassMapInterpolate1("icon navigation ", ctx.choiseMenu == 2 ? "selected" : "", "");
+        ɵɵclassMapInterpolate1("icon zoom ", ctx.choiseMenu == 2 ? "selected" : "", "");
         ɵɵadvance(1);
-        ɵɵclassMapInterpolate1("icon logout ", ctx.choiseMenu == 3 ? "selected" : "", "");
-    } }, styles: [".map-container[_ngcontent-%COMP%]{position:absolute;z-index:1;top:0;left:0;right:0;bottom:0}#map[_ngcontent-%COMP%]{width:100%;height:100%}.map-container[_ngcontent-%COMP%]   .icon[_ngcontent-%COMP%]{position:absolute;z-index:1000;top:10px;right:10px;width:50px;height:50px}.menu-container[_ngcontent-%COMP%]{position:absolute;z-index:1001;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,.3);display:none}.menu-box[_ngcontent-%COMP%]{position:absolute;top:calc(50% - 100px);left:calc(50% - 300px);width:600px;height:150px;background-color:#fff;border:1px solid orange!important;text-align:center;margin-top:50px}.menu-box[_ngcontent-%COMP%]   .icon[_ngcontent-%COMP%]{display:inline-block;width:150px;height:150px;border:0;border-radius:3px;background-size:100px 100px;background-repeat:no-repeat;background-position:center}.menu-box[_ngcontent-%COMP%]   .selected[_ngcontent-%COMP%]{background-color:orange}.show-menu[_ngcontent-%COMP%]{display:block}"] });
+        ɵɵclassMapInterpolate1("icon navigation ", ctx.choiseMenu == 3 ? "selected" : "", "");
+        ɵɵadvance(1);
+        ɵɵclassMapInterpolate1("icon logout ", ctx.choiseMenu == 4 ? "selected" : "", "");
+    } }, styles: [".map-container[_ngcontent-%COMP%]{position:absolute;z-index:1;top:0;left:0;right:0;bottom:0}#map[_ngcontent-%COMP%]{width:100%;height:100%}.map-container[_ngcontent-%COMP%]   .icon[_ngcontent-%COMP%]{position:absolute;z-index:1000;top:10px;right:10px;width:50px;height:50px}.menu-container[_ngcontent-%COMP%]{position:absolute;z-index:1001;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,.3);display:none}.menu-box[_ngcontent-%COMP%]{position:absolute;top:calc(50% - 100px);left:calc(50% - 375px);width:750px;height:150px;background-color:#fff;border:1px solid orange!important;text-align:center;margin-top:50px}.menu-box[_ngcontent-%COMP%]   .icon[_ngcontent-%COMP%]{display:inline-block;width:150px;height:150px;border:0;border-radius:3px;background-size:100px 100px;background-repeat:no-repeat;background-position:center}.menu-box[_ngcontent-%COMP%]   .selected[_ngcontent-%COMP%]{background-color:orange}.show-menu[_ngcontent-%COMP%]{display:block}"] });
 /*@__PURE__*/ (function () { ɵsetClassMetadata(MapLibraryComponent, [{
         type: Component,
         args: [{
                 selector: "map-library",
-                inputs: ['mapLat', 'mapLng', 'mapZoom', 'search', 'marker'],
+                inputs: ['mapLat', 'mapLng', 'mapZoom', 'search', 'marker', 'focused'],
                 templateUrl: "./map-library.component.html",
                 styleUrls: ["./map-library.component.css",],
             }]

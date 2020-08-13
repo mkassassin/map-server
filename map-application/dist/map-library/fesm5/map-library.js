@@ -1,4 +1,4 @@
-import { ɵɵdefineInjectable, ɵsetClassMetadata, Injectable, EventEmitter, ɵɵdirectiveInject, ElementRef, ɵɵdefineComponent, ɵɵlistener, ɵɵresolveWindow, ɵɵNgOnChangesFeature, ɵɵelementStart, ɵɵelement, ɵɵelementEnd, ɵɵadvance, ɵɵclassMapInterpolate1, ɵɵclassMap, ɵɵclassMapInterpolate2, Component, Output, HostListener, ɵɵdefineNgModule, ɵɵdefineInjector, ɵɵsetNgModuleScope, NgModule } from '@angular/core';
+import { ɵɵdefineInjectable, ɵsetClassMetadata, Injectable, EventEmitter, ɵɵdirectiveInject, ElementRef, ɵɵdefineComponent, ɵɵlistener, ɵɵresolveWindow, ɵɵNgOnChangesFeature, ɵɵelementStart, ɵɵelement, ɵɵelementEnd, ɵɵadvance, ɵɵclassMapInterpolate1, ɵɵclassMap, Component, Output, HostListener, ɵɵdefineNgModule, ɵɵdefineInjector, ɵɵsetNgModuleScope, NgModule } from '@angular/core';
 import { map, tileLayer, Control, marker, Marker, DivIcon } from 'leaflet';
 import 'leaflet-control-geocoder';
 
@@ -97,13 +97,20 @@ var MapLibraryComponent = /** @class */ (function () {
         marker$1.forEach(function (element) {
             if ("lat" in element && "lng" in element) {
                 element.id = i;
-                if (!element.text) {
+                if (!element.text && element.img) {
+                    _this.mapMarkers[i] = _this.generateImageMarker(element);
+                }
+                else if (!element.text) {
                     _this.mapMarkers[i] = marker([element.lat, element.lng]);
                 }
                 else {
                     _this.mapMarkers[i] = _this.generateIconMarker(element);
                 }
                 _this.mapMarkers[i].addTo(_this.map);
+                if (_this.navigate && _this.mapLat == element.lat && _this.mapLng == element.lng) {
+                    _this.navigateId = i;
+                    _this.elem.nativeElement.querySelector("#marker_" + _this.navigateId).style.background = "orange";
+                }
                 i++;
             }
         });
@@ -117,13 +124,27 @@ var MapLibraryComponent = /** @class */ (function () {
     // generate Marker
     MapLibraryComponent.prototype.generateIconMarker = function (element) {
         // set html form
-        var html = "<div id=\"marker_" + element.id + "\" style=\"background: white; border-radius:20px; position:absolute; padding:5px 10px 0 10px; text-align:center;\">\n              <div style=\"text-align:center; font-size:1.2em;\">" + element.text + "</div>\n              " + (element.content ? "<span>" + element.content + "</span>" : "") +
-            (element.img ? "<img style=\"width:60px\" src=\"" + element.img + "\"/>" : "") + "\n            </div>";
+        var html = "\n      <div class=\"marker\" id=\"marker_" + element.id + "\">\n        <div>" + element.text + "</div>\n        " + (element.content ? "<span>" + element.content + "</span>" : "") +
+            (element.img ? "<img src=\"" + element.img + "\"/>" : "") + "\n      </div>";
         // return leaflet marker
         return new Marker([element.lat, element.lng], {
             icon: new DivIcon({
                 className: '',
                 iconSize: [100, 70],
+                iconAnchor: [60, element.img ? 40 : 10],
+                html: html,
+            })
+        });
+    };
+    // generate image Marker
+    MapLibraryComponent.prototype.generateImageMarker = function (element) {
+        // set html form
+        var html = "<img id=\"marker_" + element.id + "\" style=\"width:80px;\" src=\"" + element.img + "\"/>";
+        // return leaflet marker
+        return new Marker([element.lat, element.lng], {
+            icon: new DivIcon({
+                className: '',
+                iconSize: [80, 70],
                 iconAnchor: [45, element.img ? 40 : 10],
                 html: html,
             })
@@ -150,16 +171,18 @@ var MapLibraryComponent = /** @class */ (function () {
     };
     /*************** keyboard event detect and functions *************/
     MapLibraryComponent.prototype.keyEvent = function (event) {
-        if (this.displayMenu != "") {
-            this.handlingMenu(event.key);
-        }
-        else if (this.navigate) {
-            this.handlingNavigation(event.key);
-        }
-        else {
-            this.handlingMap(event.key);
-            // send change to parent application
-            this.sendModifications(event.key);
+        if (this.focused) {
+            if (this.displayMenu != "") {
+                this.handlingMenu(event.key);
+            }
+            else if (this.navigate) {
+                this.handlingNavigation(event.key);
+            }
+            else {
+                this.handlingMap(event.key);
+                // send change to parent application
+                this.sendModifications(event.key);
+            }
         }
     };
     MapLibraryComponent.prototype.handlingNavigation = function (key) {
@@ -190,14 +213,14 @@ var MapLibraryComponent = /** @class */ (function () {
         switch (key) {
             case "ArrowRight":
                 this.choiseMenu++;
-                if (this.choiseMenu > 3) {
+                if (this.choiseMenu > 4) {
                     this.choiseMenu = 0;
                 }
                 break;
             case "ArrowLeft":
                 this.choiseMenu--;
                 if (this.choiseMenu < 0) {
-                    this.choiseMenu = 3;
+                    this.choiseMenu = 4;
                 }
                 break;
             case "Enter":
@@ -210,13 +233,17 @@ var MapLibraryComponent = /** @class */ (function () {
                     this.setFocusOut();
                 }
                 if (this.choiseMenu == 1) {
-                    this.setMarker(this.marker);
-                    this.changeMode();
+                    this.handleIcon = "move";
+                    this.moveMode = true;
                 }
                 else if (this.choiseMenu == 2) {
-                    this.setNavigationMode();
+                    this.handleIcon = "zoom";
+                    this.moveMode = false;
                 }
                 else if (this.choiseMenu == 3) {
+                    this.setNavigationMode();
+                }
+                else if (this.choiseMenu == 4) {
                     alert("exit");
                 }
                 this.closeMenu();
@@ -281,11 +308,11 @@ var MapLibraryComponent = /** @class */ (function () {
         this.moveMode = !this.moveMode;
         if (this.moveMode) {
             this.handleIcon = "move";
-            this.handleMenuIcon = "zoom";
+            this.choiseMenu = 1;
         }
         else {
             this.handleIcon = "zoom";
-            this.handleMenuIcon = "move";
+            this.choiseMenu = 2;
         }
     };
     MapLibraryComponent.prototype.sendModifications = function (key) {
@@ -317,7 +344,6 @@ var MapLibraryComponent = /** @class */ (function () {
     };
     MapLibraryComponent.prototype.closeMenu = function () {
         this.displayMenu = "";
-        this.choiseMenu = 1;
     };
     // show escape message
     MapLibraryComponent.prototype.selectMenu = function (key) {
@@ -369,45 +395,53 @@ var MapLibraryComponent = /** @class */ (function () {
         else {
             this.navigateId = 0;
         }
-        this.elem.nativeElement.querySelector("#marker_" + this.navigateId).style.background = "orange";
+        var el = this.marker[this.navigateId];
+        this.mapLat = el.lat;
+        this.mapLng = el.lng;
+        this.moveMap(0, 0);
+        this.sendModifications("");
+    };
+    MapLibraryComponent.prototype.calcAngle = function (adjacent, opposite) {
+        return Math.atan(Math.abs(opposite) / Math.abs(adjacent)) * (180 / Math.PI);
+    };
+    MapLibraryComponent.prototype.calcHyp = function (adjacent, opposite) {
+        return Math.sqrt(Math.pow(adjacent, 2) + Math.pow(opposite, 2));
+        ;
     };
     MapLibraryComponent.prototype.findFirstLeftElement = function () {
+        var _this = this;
         var selected = this.marker[this.navigateId];
-        var newSelect = this.marker[this.navigateId == 0 ? 1 : 0];
+        var newSelect = null;
         this.marker.forEach(function (element) {
-            if (element != selected && element.lng < selected.lng && (element.lng > newSelect.lng || newSelect.lng > selected.lng)) {
-                newSelect = element;
+            if (element != selected && element.lng < selected.lng && (newSelect == null || (element.lng > newSelect.lng || newSelect.lng > selected.lng))) {
+                var angle = _this.calcAngle(element.lng - selected.lng, element.lat - selected.lat);
+                //console.log(element.text+" "+angle)
+                if (angle < 45) {
+                    newSelect = element;
+                }
             }
         });
-        if (newSelect.lng >= selected.lng) {
-            var min_1 = this.marker[0];
-            this.marker.forEach(function (element) {
-                if (element.lng > min_1.lng) {
-                    min_1 = element;
-                }
-            });
-            this.navigateId = min_1.id;
+        if (newSelect == null || newSelect.lng >= selected.lng) {
+            this.navigateId = selected.id;
         }
         else {
             this.navigateId = newSelect.id;
         }
     };
     MapLibraryComponent.prototype.findFirstRightElement = function () {
+        var _this = this;
         var selected = this.marker[this.navigateId];
-        var newSelect = this.marker[this.navigateId == 0 ? 1 : 0];
+        var newSelect = null;
         this.marker.forEach(function (element) {
-            if (element != selected && element.lng > selected.lng && (element.lng < newSelect.lng || newSelect.lng < selected.lng)) {
-                newSelect = element;
+            if (element != selected && element.lng > selected.lng && (newSelect == null || (element.lng < newSelect.lng || newSelect.lng < selected.lng))) {
+                var angle = _this.calcAngle(element.lng - selected.lng, element.lat - selected.lat);
+                if (angle < 45) {
+                    newSelect = element;
+                }
             }
         });
-        if (newSelect.lng <= selected.lng) {
-            var min_2 = this.marker[0];
-            this.marker.forEach(function (element) {
-                if (element.lng < min_2.lng) {
-                    min_2 = element;
-                }
-            });
-            this.navigateId = min_2.id;
+        if (newSelect == null || newSelect.lng <= selected.lng) {
+            this.navigateId = selected.id;
         }
         else {
             this.navigateId = newSelect.id;
@@ -422,13 +456,7 @@ var MapLibraryComponent = /** @class */ (function () {
             }
         });
         if (newSelect.lat >= selected.lat) {
-            var min_3 = this.marker[0];
-            this.marker.forEach(function (element) {
-                if (element.lat > min_3.lat) {
-                    min_3 = element;
-                }
-            });
-            this.navigateId = min_3.id;
+            this.navigateId = selected.id;
         }
         else {
             this.navigateId = newSelect.id;
@@ -443,13 +471,7 @@ var MapLibraryComponent = /** @class */ (function () {
             }
         });
         if (newSelect.lat <= selected.lat) {
-            var min_4 = this.marker[0];
-            this.marker.forEach(function (element) {
-                if (element.lat < min_4.lat) {
-                    min_4 = element;
-                }
-            });
-            this.navigateId = min_4.id;
+            this.navigateId = selected.id;
         }
         else {
             this.navigateId = newSelect.id;
@@ -505,7 +527,7 @@ var MapLibraryComponent = /** @class */ (function () {
     MapLibraryComponent.ɵfac = function MapLibraryComponent_Factory(t) { return new (t || MapLibraryComponent)(ɵɵdirectiveInject(ElementRef)); };
     MapLibraryComponent.ɵcmp = ɵɵdefineComponent({ type: MapLibraryComponent, selectors: [["map-library"]], hostBindings: function MapLibraryComponent_HostBindings(rf, ctx) { if (rf & 1) {
             ɵɵlistener("keyup", function MapLibraryComponent_keyup_HostBindingHandler($event) { return ctx.keyEvent($event); }, false, ɵɵresolveWindow);
-        } }, inputs: { mapLat: "mapLat", mapLng: "mapLng", mapZoom: "mapZoom", search: "search", marker: "marker" }, outputs: { onchange: "onchange", onselect: "onselect" }, features: [ɵɵNgOnChangesFeature], decls: 9, vars: 19, consts: [[1, "map-container"], ["id", "map"], [1, "menu-container"], [1, "menu-box"]], template: function MapLibraryComponent_Template(rf, ctx) { if (rf & 1) {
+        } }, inputs: { mapLat: "mapLat", mapLng: "mapLng", mapZoom: "mapZoom", search: "search", marker: "marker", focused: "focused" }, outputs: { onchange: "onchange", onselect: "onselect" }, features: [ɵɵNgOnChangesFeature], decls: 10, vars: 21, consts: [[1, "map-container"], ["id", "map"], [1, "menu-container"], [1, "menu-box"]], template: function MapLibraryComponent_Template(rf, ctx) { if (rf & 1) {
             ɵɵelementStart(0, "div", 0);
             ɵɵelement(1, "i");
             ɵɵelement(2, "div", 1);
@@ -516,6 +538,7 @@ var MapLibraryComponent = /** @class */ (function () {
             ɵɵelement(6, "i");
             ɵɵelement(7, "i");
             ɵɵelement(8, "i");
+            ɵɵelement(9, "i");
             ɵɵelementEnd();
             ɵɵelementEnd();
         } if (rf & 2) {
@@ -526,19 +549,21 @@ var MapLibraryComponent = /** @class */ (function () {
             ɵɵadvance(2);
             ɵɵclassMapInterpolate1("icon search ", ctx.choiseMenu == 0 ? "selected" : "", "");
             ɵɵadvance(1);
-            ɵɵclassMapInterpolate2("icon ", ctx.handleMenuIcon, " ", ctx.choiseMenu == 1 ? "selected" : "", "");
+            ɵɵclassMapInterpolate1("icon move ", ctx.choiseMenu == 1 ? "selected" : "", "");
             ɵɵadvance(1);
-            ɵɵclassMapInterpolate1("icon navigation ", ctx.choiseMenu == 2 ? "selected" : "", "");
+            ɵɵclassMapInterpolate1("icon zoom ", ctx.choiseMenu == 2 ? "selected" : "", "");
             ɵɵadvance(1);
-            ɵɵclassMapInterpolate1("icon logout ", ctx.choiseMenu == 3 ? "selected" : "", "");
-        } }, styles: [".map-container[_ngcontent-%COMP%]{position:absolute;z-index:1;top:0;left:0;right:0;bottom:0}#map[_ngcontent-%COMP%]{width:100%;height:100%}.map-container[_ngcontent-%COMP%]   .icon[_ngcontent-%COMP%]{position:absolute;z-index:1000;top:10px;right:10px;width:50px;height:50px}.menu-container[_ngcontent-%COMP%]{position:absolute;z-index:1001;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,.3);display:none}.menu-box[_ngcontent-%COMP%]{position:absolute;top:calc(50% - 100px);left:calc(50% - 300px);width:600px;height:150px;background-color:#fff;border:1px solid orange!important;text-align:center;margin-top:50px}.menu-box[_ngcontent-%COMP%]   .icon[_ngcontent-%COMP%]{display:inline-block;width:150px;height:150px;border:0;border-radius:3px;background-size:100px 100px;background-repeat:no-repeat;background-position:center}.menu-box[_ngcontent-%COMP%]   .selected[_ngcontent-%COMP%]{background-color:orange}.show-menu[_ngcontent-%COMP%]{display:block}"] });
+            ɵɵclassMapInterpolate1("icon navigation ", ctx.choiseMenu == 3 ? "selected" : "", "");
+            ɵɵadvance(1);
+            ɵɵclassMapInterpolate1("icon logout ", ctx.choiseMenu == 4 ? "selected" : "", "");
+        } }, styles: [".map-container[_ngcontent-%COMP%]{position:absolute;z-index:1;top:0;left:0;right:0;bottom:0}#map[_ngcontent-%COMP%]{width:100%;height:100%}.map-container[_ngcontent-%COMP%]   .icon[_ngcontent-%COMP%]{position:absolute;z-index:1000;top:10px;right:10px;width:50px;height:50px}.menu-container[_ngcontent-%COMP%]{position:absolute;z-index:1001;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,.3);display:none}.menu-box[_ngcontent-%COMP%]{position:absolute;top:calc(50% - 100px);left:calc(50% - 375px);width:750px;height:150px;background-color:#fff;border:1px solid orange!important;text-align:center;margin-top:50px}.menu-box[_ngcontent-%COMP%]   .icon[_ngcontent-%COMP%]{display:inline-block;width:150px;height:150px;border:0;border-radius:3px;background-size:100px 100px;background-repeat:no-repeat;background-position:center}.menu-box[_ngcontent-%COMP%]   .selected[_ngcontent-%COMP%]{background-color:orange}.show-menu[_ngcontent-%COMP%]{display:block}"] });
     return MapLibraryComponent;
 }());
 /*@__PURE__*/ (function () { ɵsetClassMetadata(MapLibraryComponent, [{
         type: Component,
         args: [{
                 selector: "map-library",
-                inputs: ['mapLat', 'mapLng', 'mapZoom', 'search', 'marker'],
+                inputs: ['mapLat', 'mapLng', 'mapZoom', 'search', 'marker', 'focused'],
                 templateUrl: "./map-library.component.html",
                 styleUrls: ["./map-library.component.css",],
             }]

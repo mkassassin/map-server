@@ -19,20 +19,21 @@ app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-
-
 var i = schedule.scheduleJob('* 5 0 * *', function() {
 	const chunkArray = (array, size) => array.length > size ? [array.slice(0, size), ...chunkArray(array.slice(size), size)] : [array];
 	var arrIds = chunkArray(city_Ids, 20);
 	var requests = [];
 	arrIds.map(obj => {
-		requests.push(axios.get('https://api.openweathermap.org/data/2.5/group?id=' + obj + '&units=metric&appid=39f7af91a4b080cd1fdef1f8e81062e7'));
+		const Ids = obj.map(objOne => objOne.CityID);
+		requests.push(axios.get('https://api.openweathermap.org/data/2.5/group?id=' + Ids + '&units=metric&appid=39f7af91a4b080cd1fdef1f8e81062e7'));
 	});
 	axios.all(requests).then(
 		axios.spread((...responses) => {
 			const dataArray = [];
 			responses.map(obj => {
 				obj.data.list.map(objNew => {
+					const idx = city_Ids.findIndex(objOne => objOne.CityID === objNew.id);
+					objNew.zoom = city_Ids[idx].zoom;
 					dataArray.push(objNew);
 				});
 			});
@@ -52,13 +53,16 @@ var j = schedule.scheduleJob('* 5 12 * *', function() {
 	var arrIds = chunkArray(city_Ids, 20);
 	var requests = [];
 	arrIds.map(obj => {
-		requests.push(axios.get('https://api.openweathermap.org/data/2.5/group?id=' + obj + '&units=metric&appid=39f7af91a4b080cd1fdef1f8e81062e7'));
+		const Ids = obj.map(objOne => objOne.CityID);
+		requests.push(axios.get('https://api.openweathermap.org/data/2.5/group?id=' + Ids + '&units=metric&appid=39f7af91a4b080cd1fdef1f8e81062e7'));
 	});
 	axios.all(requests).then(
 		axios.spread((...responses) => {
 			const dataArray = [];
 			responses.map(obj => {
 				obj.data.list.map(objNew => {
+					const idx = city_Ids.findIndex(objOne => objOne.CityID === objNew.id);
+					objNew.zoom = city_Ids[idx].zoom;
 					dataArray.push(objNew);
 				});
 			});
@@ -76,7 +80,11 @@ var j = schedule.scheduleJob('* 5 12 * *', function() {
 app.get('/weatherData', function (req, res) {
 	const today = new Date().getDate() + '-' + (new Date().getMonth() + 1) + '-' + new Date().getFullYear();
 	fs.readFile('./Data/weather_data/' + today + '.json', 'utf8', function(err, data) {
-		res.send(JSON.parse(data));
+		if (data && data !== null) {
+			res.send(JSON.parse(data));
+		} else {
+			res.send([]);
+		}
   	}); 
 });
 

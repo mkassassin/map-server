@@ -1,1 +1,123 @@
 @import "~../dist/map-library/src/styles.css";
+
+* {
+    font-family: Arial;
+}
+
+#infobox {
+    position: fixed;
+    top:5%;
+    left:10%;
+    height: 90%;
+    width: 80%;
+    z-index: 1000;
+    background-color: rgba(0, 0, 0, 0.9);
+    border: 1px solid orange;
+    display: none;
+    padding: 3%;
+}
+#infobox, #infobox *{
+    box-sizing: border-box;
+}
+h2{
+    color: white;
+    font-size: 35px;
+    line-height: 70px;
+    height: 70px;
+    padding-left: 30px;
+    margin: 0;
+}
+.col{
+    display: inline-block;
+    width: 48%;
+    height: 100%;
+    vertical-align: top;
+    overflow-y: scroll;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+#infobox .wheather {
+	width: 500px;
+	/* background: white; */
+	color: #ffffff;
+}
+#infobox h2{
+	text-align: left;
+	color: #ffffff;
+	font-size: 35px;
+	line-height: 70px;
+	height: 70px;
+	padding-left: 30px;
+	margin: 0;
+}
+#infobox .wheatherInfo {
+	text-align: center;
+	display: inline-flex;
+	align-items: center;
+	width: 100%;
+	justify-content: center;
+}
+#infobox .wheatherInfo img {
+	width: 100px;
+}
+#infobox .content {
+	font-size: 30px;
+	color: #4CAF50;
+	padding-left: 20px;
+}
+#infobox .wheatherDetailes {
+	padding: 10px 20px;
+}
+#infobox .wheatherDetailes h3 {
+	text-align: center;
+	border-bottom: 1px solid rgb(192 192 192 / 14%);
+	padding: 10px 0;
+	margin: 0;
+}
+#infobox .wheatherDetailes .dataList {
+	display: grid;
+	grid-template-columns: 180px 320px;
+	border-bottom: 1px solid rgb(192 192 192 / 14%);
+	padding: 10px 2px;
+}
+#infobox .dataList .dataLable {
+	font-weight: 700;
+	padding: 0;
+	margin: 0;
+}
+#infobox .dataList .dataValue {
+	padding: 0;
+	margin: 0;
+}
+#infobox .dataValue .windDir{
+	width: 17px;
+   transform: rotate(-45deg);
+   margin: 0px 0px -3px 5px;
+}
+.thumb{
+    width: calc(100% - 505px);
+    border-left: 1px solid orange;
+    padding-left: 20px;
+}
+.infotitle {
+    color: white;
+}
+
+.imgContainer {
+    display: inline-block;
+    width: 200px;
+    height: 150px;
+    margin: 5px;
+    overflow: hidden;
+}
+.imgContainer div {
+    overflow: auto;
+}
+.imgContainer img {
+    width: 100%;
+}
+
+::-webkit-scrollbar {
+    display: none;
+    width: 0;
+}

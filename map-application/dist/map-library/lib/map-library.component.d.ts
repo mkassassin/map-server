@@ -13,6 +13,7 @@ export declare class MapLibraryComponent implements AfterViewInit {
     mapZoom: number;
     search: String;
     marker: any;
+    focused: boolean;
     onchange: EventEmitter<any>;
     onselect: EventEmitter<any>;
     private map;
@@ -36,6 +37,7 @@ export declare class MapLibraryComponent implements AfterViewInit {
     private setMarker;
     private cleanMarkers;
     private generateIconMarker;
+    private generateImageMarker;
     /*************** components attributes events *************/
     ngOnChanges(changes: SimpleChanges): void;
     /*************** keyboard event detect and functions *************/
@@ -53,6 +55,8 @@ export declare class MapLibraryComponent implements AfterViewInit {
     /*************** navigate between markers *************/
     private setNavigationMode;
     private navigateMarker;
+    private calcAngle;
+    private calcHyp;
     private findFirstLeftElement;
     private findFirstRightElement;
     private findFirstBottomElement;
@@ -67,5 +71,5 @@ export declare class MapLibraryComponent implements AfterViewInit {
     setFocus(): void;
     setFocusOut(): void;
     static ɵfac: i0.ɵɵFactoryDef<MapLibraryComponent>;
-    static ɵcmp: i0.ɵɵComponentDefWithMeta<MapLibraryComponent, "map-library", never, { "mapLat": "mapLat"; "mapLng": "mapLng"; "mapZoom": "mapZoom"; "search": "search"; "marker": "marker"; }, { "onchange": "onchange"; "onselect": "onselect"; }, never>;
+    static ɵcmp: i0.ɵɵComponentDefWithMeta<MapLibraryComponent, "map-library", never, { "mapLat": "mapLat"; "mapLng": "mapLng"; "mapZoom": "mapZoom"; "search": "search"; "marker": "marker"; "focused": "focused"; }, { "onchange": "onchange"; "onselect": "onselect"; }, never>;
 }
